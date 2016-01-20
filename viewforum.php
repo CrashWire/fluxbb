@@ -162,12 +162,12 @@ if ($db->num_rows($result))
 	if ($pun_user['is_guest'] || $pun_config['o_show_dot'] == '0')
 	{
 		// Without "the dot"
-		$sql = 'SELECT id, poster, subject, posted, last_post, last_post_id, last_poster, num_views, num_replies, closed, sticky, moved_to FROM '.$db->prefix.'topics WHERE id IN('.implode(',', $topic_ids).') ORDER BY sticky DESC, '.$sort_by.', id DESC';
+		$sql = 'SELECT id, poster, subject, description, posted, last_post, last_post_id, last_poster, num_views, num_replies, closed, sticky, moved_to FROM '.$db->prefix.'topics WHERE id IN('.implode(',', $topic_ids).') ORDER BY sticky DESC, '.$sort_by.', id DESC';
 	}
 	else
 	{
 		// With "the dot"
-		$sql = 'SELECT p.poster_id AS has_posted, t.id, t.subject, t.poster, t.posted, t.last_post, t.last_post_id, t.last_poster, t.num_views, t.num_replies, t.closed, t.sticky, t.moved_to FROM '.$db->prefix.'topics AS t LEFT JOIN '.$db->prefix.'posts AS p ON t.id=p.topic_id AND p.poster_id='.$pun_user['id'].' WHERE t.id IN('.implode(',', $topic_ids).') GROUP BY t.id'.($db_type == 'pgsql' ? ', t.subject, t.poster, t.posted, t.last_post, t.last_post_id, t.last_poster, t.num_views, t.num_replies, t.closed, t.sticky, t.moved_to, p.poster_id' : '').' ORDER BY t.sticky DESC, t.'.$sort_by.', t.id DESC';
+		$sql = 'SELECT p.poster_id AS has_posted, t.id, t.subject, t.description, t.poster, t.posted, t.last_post, t.last_post_id, t.last_poster, t.num_views, t.num_replies, t.closed, t.sticky, t.moved_to FROM '.$db->prefix.'topics AS t LEFT JOIN '.$db->prefix.'posts AS p ON t.id=p.topic_id AND p.poster_id='.$pun_user['id'].' WHERE t.id IN('.implode(',', $topic_ids).') GROUP BY t.id'.($db_type == 'pgsql' ? ', t.subject, t.description, t.poster, t.posted, t.last_post, t.last_post_id, t.last_poster, t.num_views, t.num_replies, t.closed, t.sticky, t.moved_to, p.poster_id' : '').' ORDER BY t.sticky DESC, t.'.$sort_by.', t.id DESC';
 	}
 
 	$result = $db->query($sql) or error('Unable to fetch topic list', __FILE__, __LINE__, $db->error());
@@ -185,8 +185,9 @@ if ($db->num_rows($result))
 		else
 			$last_post = '- - -';
 
-		if ($pun_config['o_censoring'] == '1')
+		if ($pun_config['o_censoring'] == '1'){
 			$cur_topic['subject'] = censor_words($cur_topic['subject']);
+			$cur_topic['description'] = censor_words($cur_topic['description']);}
 
 		if ($cur_topic['sticky'] == '1')
 		{
@@ -252,7 +253,8 @@ if ($db->num_rows($result))
 						<div class="<?php echo $icon_type ?>"><div class="nosize"><?php echo forum_number_format($topic_count + $start_from) ?></div></div>
 						<div class="tclcon">
 							<div>
-								<?php echo $subject."\n" ?>
+								<?php echo $subject."\n " ?><br /><br />
+								<?php echo pun_htmlspecialchars($cur_topic['description'])?>
 							</div>
 						</div>
 					</td>

@@ -19,7 +19,7 @@ if ($id < 1)
 	message($lang_common['Bad request'], false, '404 Not Found');
 
 // Fetch some info about the post, the topic and the forum
-$result = $db->query('SELECT f.id AS fid, f.forum_name, f.moderators, f.redirect_url, fp.post_replies, fp.post_topics, t.id AS tid, t.subject, t.posted, t.first_post_id, t.sticky, t.closed, p.poster, p.poster_id, p.message, p.hide_smilies FROM '.$db->prefix.'posts AS p INNER JOIN '.$db->prefix.'topics AS t ON t.id=p.topic_id INNER JOIN '.$db->prefix.'forums AS f ON f.id=t.forum_id LEFT JOIN '.$db->prefix.'forum_perms AS fp ON (fp.forum_id=f.id AND fp.group_id='.$pun_user['g_id'].') WHERE (fp.read_forum IS NULL OR fp.read_forum=1) AND p.id='.$id) or error('Unable to fetch post info', __FILE__, __LINE__, $db->error());
+$result = $db->query('SELECT f.id AS fid, f.forum_name, f.moderators, f.redirect_url, fp.post_replies, fp.post_topics, t.id AS tid, t.subject, t.description, t.posted, t.first_post_id, t.sticky, t.closed, p.poster, p.poster_id, p.message, p.hide_smilies FROM '.$db->prefix.'posts AS p INNER JOIN '.$db->prefix.'topics AS t ON t.id=p.topic_id INNER JOIN '.$db->prefix.'forums AS f ON f.id=t.forum_id LEFT JOIN '.$db->prefix.'forum_perms AS fp ON (fp.forum_id=f.id AND fp.group_id='.$pun_user['g_id'].') WHERE (fp.read_forum IS NULL OR fp.read_forum=1) AND p.id='.$id) or error('Unable to fetch post info', __FILE__, __LINE__, $db->error());
 if (!$db->num_rows($result))
 	message($lang_common['Bad request'], false, '404 Not Found');
 
@@ -34,6 +34,7 @@ $can_edit_subject = $id == $cur_post['first_post_id'];
 if ($pun_config['o_censoring'] == '1')
 {
 	$cur_post['subject'] = censor_words($cur_post['subject']);
+	$cur_post['description'] = censor_words($cur_post['description']);
 	$cur_post['message'] = censor_words($cur_post['message']);
 }
 
@@ -50,6 +51,9 @@ if ($is_admmod && $pun_user['g_id'] != PUN_ADMIN && in_array($cur_post['poster_i
 // Load the post.php language file
 require PUN_ROOT.'lang/'.$pun_user['language'].'/post.php';
 
+// Load the description.php language file
+require PUN_ROOT.'lang/'.$pun_user['language'].'/description.php';
+
 // Start with a clean slate
 $errors = array();
 
@@ -63,6 +67,7 @@ if (isset($_POST['form_sent']))
 	if ($can_edit_subject)
 	{
 		$subject = pun_trim($_POST['req_subject']);
+		$description = pun_trim($_POST['description']);
 
 		if ($pun_config['o_censoring'] == '1')
 			$censored_subject = pun_trim(censor_words($subject));
@@ -125,10 +130,10 @@ if (isset($_POST['form_sent']))
 		if ($can_edit_subject)
 		{
 			// Update the topic and any redirect topics
-			$db->query('UPDATE '.$db->prefix.'topics SET subject=\''.$db->escape($subject).'\', sticky='.$stick_topic.' WHERE id='.$cur_post['tid'].' OR moved_to='.$cur_post['tid']) or error('Unable to update topic', __FILE__, __LINE__, $db->error());
+			$db->query('UPDATE '.$db->prefix.'topics SET subject=\''.$db->escape($subject).'\', description=\''.$db->escape($description).'\', sticky='.$stick_topic.' WHERE id='.$cur_post['tid'].' OR moved_to='.$cur_post['tid']) or error('Unable to update topic', __FILE__, __LINE__, $db->error());
 
 			// We changed the subject, so we need to take that into account when we update the search words
-			update_search_index('edit', $id, $message, $subject);
+			update_search_index('edit', $id, $message, $subject, $description);
 		}
 		else
 			update_search_index('edit', $id, $message);
@@ -225,6 +230,7 @@ else if (isset($_POST['preview']))
 					<div class="infldset txtarea">
 <?php if ($can_edit_subject): ?>						<label class="required"><strong><?php echo $lang_common['Subject'] ?> <span><?php echo $lang_common['Required'] ?></span></strong><br />
 						<input class="longinput" type="text" name="req_subject" size="80" maxlength="70" tabindex="<?php echo $cur_index++ ?>" value="<?php echo pun_htmlspecialchars(isset($_POST['req_subject']) ? $_POST['req_subject'] : $cur_post['subject']) ?>" /><br /></label>
+						<label><strong><?php echo $lang_description['Description'] ?></strong><br /><textarea id="description" name="description" rows="3" cols="95" maxlength="255" tabindex="<?php echo $cur_index++ ?>"><?php echo pun_htmlspecialchars(isset($_POST['req_description']) ? $description : $cur_post['description']) ?></textarea><br /></label>
 <?php endif; ?>						<label class="required"><strong><?php echo $lang_common['Message'] ?> <span><?php echo $lang_common['Required'] ?></span></strong><br />
 						<textarea name="req_message" rows="20" cols="95" tabindex="<?php echo $cur_index++ ?>"><?php echo pun_htmlspecialchars(isset($_POST['req_message']) ? $message : $cur_post['message']) ?></textarea><br /></label>
 						<ul class="bblinks">
